@@ -1,288 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NFC QSL Card Writer/Reader</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .container {
-      display: flex;
-      justify-content: space-between;
-    }
-    .column {
-      width: 48%;
-    }
-    .form-group {
-      margin-bottom: 10px;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      font-size: 14px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-    .output {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    .status {
-      margin-top: 10px;
-      font-size: 14px;
-      color: green;
-    }
-    .error {
-      color: red;
-    }
-    .default-value {
-      color: #ccc;
-    }
-    .debug-window {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #fff3cd;
-      border: 1px solid #ffc107;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-
-  <div class="container">
-    <!-- Left: Write card -->
-    <div class="column">
-      <h2>Write QSL Card</h2>
-      
-      <div class="form-group">
-        <label for="cfm">CFM:</label>
-        <select id="cfm">
-          <option value="Our QSO">Our QSO</option>
-          <option value="Your SWL Report">Your SWL Report</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="toRadio">To Radio (Callsign):</label>
-        <input type="text" id="toRadio" placeholder="AB3DEF">
-      </div>
-
-      <div class="form-group">
-        <label for="date">DATE:</label>
-        <input type="date" id="date" value="2024-12-06">
-      </div>
-
-      <div class="form-group">
-        <label for="time">TIME:</label>
-        <input type="time" id="time" value="14:30">
-      </div>
-
-      <div class="form-group">
-        <label for="freq">Freq (MHz):</label>
-        <input type="text" id="freq" placeholder="1420">
-      </div>
-
-      <div class="form-group">
-        <label for="mode">Mode:</label>
-        <input type="text" id="mode">
-      </div>
-
-      <div class="form-group">
-        <label for="rst">RST:</label>
-        <input type="text" id="rst" placeholder="你的信号59+,呼号再过来一遍">
-      </div>
-
-      <div class="form-group">
-        <label for="rig">RIG:</label>
-        <input type="text" id="rig" placeholder="火花发射机">
-      </div>
-
-      <div class="form-group">
-        <label for="pwr">PWR:</label>
-        <input type="text" id="pwr" placeholder="🐢">
-      </div>
-
-      <div class="form-group">
-        <label for="ant">ANT:</label>
-        <input type="text" id="ant" placeholder="长线加天调">
-      </div>
-
-      <div class="form-group">
-        <label for="qth">QTH:</label>
-        <input type="text" id="qth">
-      </div>
-
-      <div class="form-group">
-        <label for="op">OP (Operator):</label>
-        <input type="text" id="op" placeholder="新人，A类考试没报上">
-      </div>
-
-      <button id="writeButton">Write QSL Card</button>
-      
-      <div class="output">
-        <h3>Write Status:</h3>
-        <p id="writeStatus">Not attempted yet.</p>
-      </div>
+    <h1>欢迎来到 ABC 网站</h1>
+    <div>
+        <button onclick="window.location.href='https://www.abc.com/nfcqsl';">跳转到 NFCQSL</button>
+        <button onclick="window.location.href='https://www.abc.com/award';">跳转到 Award</button>
     </div>
-
-    <!-- Right: Read card -->
-    <div class="column">
-      <h2>Read QSL Card</h2>
-      
-      <button id="scanButton">Scan NFC Tag</button>
-
-      <div class="output">
-        <h3>Read Data:</h3>
-        <pre id="readData">No data read yet.</pre>
-      </div>
-
-      <div class="output">
-        <h3>Scan Status:</h3>
-        <p id="scanStatus">Not attempted yet.</p>
-        <p id="errorStatus" class="error">Error: No error.</p>
-      </div>
-
-      <button id="lockButton" style="display:none;">确认数据无误，锁卡</button>
-    </div>
-  </div>
-
-  <script>
-    const writeButton = document.getElementById("writeButton");
-    const scanButton = document.getElementById("scanButton");
-    const lockButton = document.getElementById("lockButton");
-    const writeStatusElement = document.getElementById("writeStatus");
-    const scanStatusElement = document.getElementById("scanStatus");
-    const readDataElement = document.getElementById("readData");
-    const errorStatusElement = document.getElementById("errorStatus");
-
-    let isScanning = false;  // Flag to control the scanning process
-
-    const dataToString = (dataView) => {
-      const decoder = new TextDecoder('utf-8');
-      return decoder.decode(dataView);
-    };
-
-    const calculateDataSize = (data) => {
-      // Calculate JSON string size in bytes (approximate)
-      const jsonString = JSON.stringify(data);
-      return new TextEncoder().encode(jsonString).length;
-    };
-
-    // Write to NFC
-    writeButton.addEventListener("click", async () => {
-      const cfm = document.getElementById("cfm").value;
-      const toRadio = document.getElementById("toRadio").value || "AB3DEF";
-      const date = document.getElementById("date").value;
-      const time = document.getElementById("time").value;
-      const freq = document.getElementById("freq").value || "1420";
-      const mode = document.getElementById("mode").value;
-      const rst = document.getElementById("rst").value || "你的信号59+,呼号再过来一遍";
-      const rig = document.getElementById("rig").value || "火花发射机";
-      const pwr = document.getElementById("pwr").value || "🐢";
-      const ant = document.getElementById("ant").value || "长线加天调";
-      const qth = document.getElementById("qth").value;
-      const op = document.getElementById("op").value || "新人，A类考试没报上";
-
-      // Create JSON object for the QSL card data
-      const qslData = {
-        cfm,
-        toRadio,
-        date,
-        time,
-        freq,
-        mode,
-        rst,
-        rig,
-        pwr,
-        ant,
-        qth,
-        op
-      };
-
-      // Check the size of the JSON data
-      const dataSize = calculateDataSize(qslData);
-      if (dataSize > 504) {  // NTAG215 has 504 bytes of usable memory
-        writeStatusElement.textContent = "Write Status: Failed. Data size exceeds NTAG215 capacity.";
-        return;
-      }
-
-      // Convert the data to a JSON string
-      const message = JSON.stringify(qslData);
-
-      try {
-        writeStatusElement.textContent = "Scanning...";
-        const ndef = new NDEFReader();
-        await ndef.write(message);
-        writeStatusElement.textContent = "Write Status: Success.";
-      } catch (error) {
-        writeStatusElement.textContent = "Write Status: Failed.";
-        errorStatusElement.textContent = "Error: " + error.message;
-      }
-    });
-
-    // Scan NFC
-    scanButton.addEventListener("click", async () => {
-      if (isScanning) return;  // If already scanning, do nothing
-
-      try {
-        isScanning = true;  // Start scanning
-        scanButton.disabled = true;  // Disable the scan button
-        const ndef = new NDEFReader();
-        await ndef.scan();
-        scanStatusElement.textContent = "Scan Status: Scanning...";
-
-        ndef.addEventListener("readingerror", () => {
-          scanStatusElement.textContent = "Scan Status: Failed.";
-          errorStatusElement.textContent = "Error: Tag is not NDEF.";
-          isScanning = false;  // Allow scanning again
-          scanButton.disabled = false;  // Re-enable the scan button
-        });
-
-        ndef.addEventListener("reading", ({ message, serialNumber }) => {
-          const data = message.records.map(record => dataToString(record.data)).join("\n\n");
-
-          // Attempt to parse the JSON data
-          try {
-            const parsedData = JSON.parse(data);
-            readDataElement.textContent = JSON.stringify(parsedData, null, 2);
-          } catch (error) {
-            readDataElement.textContent = "Failed to parse JSON.";
-          }
-
-          scanStatusElement.textContent = "Scan Status: Success.";
-          errorStatusElement.textContent = "Error: No error.";
-          lockButton.style.display = "inline-block";  // Show lock button
-
-          isScanning = false;  // Allow scanning again
-          scanButton.disabled = false;  // Re-enable the scan button
-        });
-      } catch (error) {
-        scanStatusElement.textContent = "Scan Status: Failed.";
-        errorStatusElement.textContent = "Error: " + error.message;
-        isScanning = false;  // Allow scanning again
-        scanButton.disabled = false;  // Re-enable the scan button
-      }
-    });
-
-    // Lock the card (make read-only)
-    lockButton.addEventListener("click", async () => {
-      try {
-        const ndef = new NDEFReader();
-        await ndef.makeReadOnly();
-        writeStatusElement.textContent = "Write Status: Card locked as read-only.";
-        lockButton.style.display = "none";  // Hide lock button after locking
-      } catch (error) {
-        writeStatusElement.textContent = "Write Status: Failed to lock card.";
-        errorStatusElement.textContent = "Error: " + error.message;
-      }
-    });
-  </script>
-
 </body>
 </html>
